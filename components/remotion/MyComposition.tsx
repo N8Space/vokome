@@ -1,0 +1,110 @@
+import { AbsoluteFill, useVideoConfig, Video, Img, Audio } from 'remotion';
+
+// Helper to proxy the Google Drive URL to avoid CORS/CORB issues in the browser
+const proxyUrl = (url: string) => {
+    if (!url) return "";
+    if (url.startsWith('/api/proxy')) return url;
+    // We encode the component to be safe, though Google Drive URLs are usually simple
+    return `/api/proxy/audio?url=${encodeURIComponent(url)}`;
+};
+
+export const MyComposition = ({
+    videoUrl,
+    captions
+}: {
+    videoUrl: string;
+    captions?: string;
+}) => {
+    const { fps, durationInFrames, width, height } = useVideoConfig();
+
+    // Check if the source is likely a video (from HeyGen or proxying an mp4)
+    // We check the RAW videoUrl, not the proxied one, to be sure.
+    const isVideo = videoUrl?.includes('.mp4');
+
+    // Use the proxy for the audio/video source if needed.
+    // However, if it's a direct HeyGen MP4 URL, we might want to try direct playback first 
+    // to avoid proxying large video files. But for CORS safety, we might stick to proxy.
+    // Let's try direct first for MP4 to avoid overhead, relying on HeyGen's CDN CORS.
+    const mediaSrc = isVideo ? videoUrl : proxyUrl(videoUrl);
+
+    return (
+        <AbsoluteFill style={{ backgroundColor: 'black' }}>
+            {/* Background Layer: Dynamic Gradient */}
+            <AbsoluteFill
+                style={{
+                    background: 'linear-gradient(to bottom right, #1e293b, #0f172a, #020617)',
+                    zIndex: 0
+                }}
+            />
+
+            {/* Decoration: Grid */}
+            <AbsoluteFill style={{
+                backgroundImage: 'radial-gradient(#475569 1px, transparent 1px)',
+                backgroundSize: '40px 40px',
+                opacity: 0.2,
+                zIndex: 1
+            }} />
+
+            {/* Avatar Layer */}
+            <AbsoluteFill style={{
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 2
+            }}>
+                <div style={{
+                    width: 400,
+                    height: 400,
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    border: '4px solid rgba(255, 255, 255, 0.2)',
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                    position: 'relative'
+                }}>
+                    {isVideo ? (
+                        <Video
+                            src={mediaSrc}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        // Muted? No, we want the audio track! But Audio tag is separate below.
+                        // If we use Video tag, it plays its own audio. We should disable the Audio tag below if using Video.
+                        />
+                    ) : (
+                        <Img
+                            src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60" // Placeholder Avatar
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                    )}
+                </div>
+            </AbsoluteFill>
+
+            {/* Audio Layer: Only if NOT rendering Video (to avoid double audio) */}
+            {mediaSrc && !isVideo && <Audio src={mediaSrc} />}
+
+
+
+            {/* Text Overlay Layer */}
+            <AbsoluteFill style={{
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                paddingBottom: 80,
+                zIndex: 3
+            }}>
+                <div style={{
+                    background: 'rgba(0,0,0,0.6)',
+                    padding: '20px 40px',
+                    borderRadius: 16,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    maxWidth: '80%',
+                    textAlign: 'center'
+                }}>
+                    <h2 style={{
+                        color: 'white',
+                        fontFamily: 'sans-serif',
+                        fontSize: 24,
+                        margin: 0
+                    }}>{captions || "Your educational content will appear here..."}</h2>
+                </div>
+            </AbsoluteFill>
+        </AbsoluteFill>
+    );
+};
